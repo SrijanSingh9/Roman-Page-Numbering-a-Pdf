@@ -16,6 +16,25 @@
     button:disabled { opacity: .55; cursor: wait; }
     #status { min-height: 1.5em; margin-top: 14px; font-size: .92rem; }
     .hint { font-size: .85rem; }
+    .footer {
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid #e2e7ef;
+  text-align: center;
+  font-size: 0.82rem;
+  color: #586579;
+  line-height: 1.8;
+}
+
+.footer a {
+  color: #2457d6;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.footer a:hover {
+  text-decoration: underline;
+}
   </style>
 </head>
 <body>
@@ -29,6 +48,14 @@
     <button id="processBtn" disabled>Add Roman page numbers</button>
     <div id="status" role="status" aria-live="polite"></div>
     <p class="hint">Processing happens locally in your browser. Your PDF is not uploaded. The footer position is calculated from each page's dimensions (A4-friendly, while also handling other page sizes). Numbers use the PDF standard Times Roman serif font.</p>
+    <footer class="footer">
+  <div>Made due to the need by <strong>Stellar</strong> ✨</div>
+  <div>
+    <a href="https://www.youtube.com/@stellar0-9" target="_blank" rel="noopener noreferrer">YouTube</a>
+    &nbsp;·&nbsp;
+    <a href="https://github.com/SrijanSingh9" target="_blank" rel="noopener noreferrer">GitHub</a>
+  </div>
+</footer>
   </main>
 
   <!-- pdf-lib browser build -->
