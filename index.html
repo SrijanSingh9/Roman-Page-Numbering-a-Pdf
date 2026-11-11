@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Roman Page Numbering for PDF</title>
+  <style>
+    :root { color-scheme: light; font-family: system-ui, -apple-system, Segoe UI, sans-serif; }
+    body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #f3f5f8; color: #172033; }
+    main { width: min(92vw, 560px); box-sizing: border-box; padding: 28px; background: white; border: 1px solid #e2e7ef; border-radius: 16px; box-shadow: 0 12px 36px #15213a12; }
+    h1 { margin: 0 0 8px; font-size: 1.45rem; }
+    p { color: #586579; line-height: 1.5; }
+    label { display: block; margin: 20px 0 8px; font-weight: 600; }
+    input[type=file] { width: 100%; box-sizing: border-box; padding: 12px; border: 1px dashed #aab5c5; border-radius: 9px; background: #fafbfc; }
+    button { margin-top: 18px; width: 100%; padding: 12px 16px; border: 0; border-radius: 9px; background: #2457d6; color: white; font-size: 1rem; font-weight: 650; cursor: pointer; }
+    button:disabled { opacity: .55; cursor: wait; }
+    #status { min-height: 1.5em; margin-top: 14px; font-size: .92rem; }
+    .hint { font-size: .85rem; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Roman Page Numbering</h1>
+    <p>Select a PDF to add centred uppercase Roman page numbers (I, II, III…) to the bottom footer of every page. The original page sizes and content are preserved.</p>
+
+    <label for="pdfFile">Choose a PDF</label>
+    <input id="pdfFile" type="file" accept="application/pdf,.pdf">
+
+    <button id="processBtn" disabled>Add Roman page numbers</button>
+    <div id="status" role="status" aria-live="polite"></div>
+    <p class="hint">Processing happens locally in your browser. Your PDF is not uploaded. The footer position is calculated from each page's dimensions (A4-friendly, while also handling other page sizes). Numbers use the PDF standard Times Roman serif font.</p>
+  </main>
+
+  <!-- pdf-lib browser build -->
+  <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+  <script>
+    const fileInput = document.getElementById('pdfFile');
+    const processBtn = document.getElementById('processBtn');
+    const status = document.getElementById('status');
+
+    fileInput.addEventListener('change', () => {
+      processBtn.disabled = !(fileInput.files && fileInput.files[0]);
+      status.textContent = '';
+    });
+
+    function toRoman(number) {
+      if (!Number.isInteger(number) || number < 1) throw new Error('Invalid page number.');
+      const values = [
+        [1000, 'M'], [900, 'CM'], [500, 'D'], [400, 'CD'],
+        [100, 'C'], [90, 'XC'], [50, 'L'], [40, 'XL'],
+        [10, 'X'], [9, 'IX'], [5, 'V'], [4, 'IV'], [1, 'I']
+      ];
+      let result = '';
+      for (const [value, numeral] of values) {
+        while (number >= value) {
+          result += numeral;
+          number -= value;
+        }
+      }
+      return result;
+    }
+
+    processBtn.addEventListener('click', async () => {
+      const file = fileInput.files && fileInput.files[0];
+      if (!file) return;
+
+      processBtn.disabled = true;
+      status.textContent = 'Processing PDF…';
+
+      try {
+        if (!window.PDFLib) throw new Error('The PDF library could not be loaded. Check your internet connection and refresh the page.');
+
+        const bytes = await file.arrayBuffer();
+        const pdfDoc = await PDFLib.PDFDocument.load(bytes);
+        const pages = pdfDoc.getPages();
+        const font = await pdfDoc.embedFont(PDFLib.StandardFonts.TimesRoman);
+        const fontSize = 11;
+        const bottomOffset = 24; // points from the bottom edge
+        const textColor = PDFLib.rgb(0.18, 0.18, 0.18);
+
+        pages.forEach((page, index) => {
+          const { width, height } = page.getSize();
+          const label = toRoman(index + 1);
+          const textWidth = font.widthOfTextAtSize(label, fontSize);
+
+          // Keep the number centred and safely inside the page's bottom margin.
+          const x = Math.max(0, (width - textWidth) / 2);
+          const y = Math.max(8, Math.min(bottomOffset, height - fontSize - 4));
+
+          page.drawText(label, {
+            x, y, size: fontSize, font, color: textColor
+          });
+        });
+
+        const outputBytes = await pdfDoc.save();
+        const blob = new Blob([outputBytes], { type: 'application/pdf' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        const baseName = file.name.replace(/\.pdf$/i, '') || 'document';
+        link.href = url;
+        link.download = `${baseName}-roman-numbered.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+        status.textContent = `Done — added Roman page numbers to ${pages.length} page${pages.length === 1 ? '' : 's'}.`;
+      } catch (error) {
+        console.error(error);
+        status.textContent = `Could not process this PDF: ${error.message || error}`;
+      } finally {
+        processBtn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
